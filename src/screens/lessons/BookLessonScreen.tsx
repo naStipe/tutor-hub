@@ -1,78 +1,125 @@
-import { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  Platform,
-} from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useState, useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { Calendar, DateData } from 'react-native-calendars';
 import { Picker } from '@react-native-picker/picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useLessons } from '../../hooks/useLessons';
 import { useStudents } from '../../hooks/useStudents';
+import { useAvailability } from '../../hooks/useAvailability';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { colors } from '../../constants/colors';
 import { spacing, radius } from '../../constants/spacing';
 import { typography } from '../../constants/typography';
 import dayjs from 'dayjs';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+dayjs.extend(isSameOrBefore);
 
 type Props = NativeStackScreenProps<any, 'BookLesson'>;
 
-export function BookLessonScreen({ navigation }: Props) {
-  const { createLesson } = useLessons();
-  const { students } = useStudents();
+const DURATIONS = [30, 45, 60, 90];
 
-  const [studentId, setStudentId] = useState(students[0]?.id ?? '');
+export function BookLessonScreen({ navigation }: Props) {
+  const { lessons, createLesson } = useLessons();
+  const { students, registeredStudents } = useStudents();
+  const { availability, isLoading: loadingAvailability } = useAvailability();
+
+  const allStudents = useMemo(() => {
+    return [
+      ...registeredStudents.map((s) => ({ id: s.id, full_name: s.full_name, type: 'profile' as const })),
+      ...students.map((s) => ({ id: s.id, full_name: s.full_name, type: 'manual' as const })),
+    ];
+  }, [registeredStudents, students]);
+
+  const [selectedStudent, setSelectedStudent] = useState(allStudents[0]?.id ?? '');
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [duration, setDuration] = useState(60);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [subject, setSubject] = useState('');
-  const [dateTime, setDateTime] = useState(new Date());
-  const [duration, setDuration] = useState('60');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
 
-  function onDateChange(event: any, selected?: Date) {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selected) {
-      const updated = new Date(dateTime);
-      updated.setFullYear(selected.getFullYear());
-      updated.setMonth(selected.getMonth());
-      updated.setDate(selected.getDate());
-      setDateTime(updated);
-    }
-    if (Platform.OS === 'android') setShowDatePicker(false);
-  }
+  const availableDays = useMemo(() => new Set(availability.map((a) => a.day_of_week)), [availability]);
 
-  function onTimeChange(event: any, selected?: Date) {
-    setShowTimePicker(Platform.OS === 'ios');
-    if (selected) {
-      const updated = new Date(dateTime);
-      updated.setHours(selected.getHours());
-      updated.setMinutes(selected.getMinutes());
-      setDateTime(updated);
+  const markedDates = useMemo(() => {
+    const marks: Record<string, any> = {};
+    const today = dayjs();
+    for (let i = 0; i < 60; i++) {
+      const d = today.add(i, 'day');
+      const dateStr = d.format('YYYY-MM-DD');
+      const isAvailable = availableDays.has(d.day());
+      marks[dateStr] = {
+        customStyles: {
+          container: { backgroundColor: isAvailable ? colors.successLight : colors.background, borderRadius: radius.md },
+          text: { color: isAvailable ? colors.success : colors.textMuted },
+        },
+      };
     }
-    if (Platform.OS === 'android') setShowTimePicker(false);
+    if (selectedDate) {
+      marks[selectedDate] = {
+        customStyles: {
+          container: { backgroundColor: colors.primary, borderRadius: radius.md },
+          text: { color: colors.textInverse, fontWeight: 'bold' },
+        },
+      };
+    }
+    return marks;
+  }, [availableDays, selectedDate]);
+
+  // Generate 15-min slots for the whole day (00:00-23:45), mark conflicts
+  const timeSlots = useMemo(() => {
+    if (!selectedDate) return [];
+
+    const slots: { time: string; available: boolean }[] = [];
+
+    const dayBooked = lessons
+      .filter((l) => l.status === 'pending' || l.status === 'scheduled')
+      .map((l) => ({ start: dayjs(l.date), end: dayjs(l.date).add(l.duration_minutes, 'minute') }))
+      .filter((b) => b.start.format('YYYY-MM-DD') === selectedDate);
+
+    let current = dayjs(selectedDate).hour(6).minute(0).second(0);
+    const end = dayjs(selectedDate).hour(22).minute(0).second(0);
+
+    while (current.isSameOrBefore(end)) {
+      const slotEnd = current.add(duration, 'minute');
+      const conflicts = dayBooked.some((b) => current.isBefore(b.end) && slotEnd.isAfter(b.start));
+      const isPast = current.isBefore(dayjs());
+
+      slots.push({ time: current.format('HH:mm'), available: !conflicts && !isPast });
+      current = current.add(15, 'minute');
+    }
+
+    return slots;
+  }, [selectedDate, duration, lessons]);
+
+  function handleDayPress(day: DateData) {
+    setSelectedDate(day.dateString);
+    setSelectedTime(null);
   }
 
   async function handleBook() {
-    if (!studentId) {
+    if (!selectedStudent) {
       Alert.alert('Error', 'Please add a student first');
       return;
     }
+    if (!selectedDate || !selectedTime) {
+      Alert.alert('Error', 'Please select a date and time');
+      return;
+    }
+
+    const studentEntry = allStudents.find((s) => s.id === selectedStudent);
+    const dateTime = dayjs(`${selectedDate} ${selectedTime}`).toISOString();
 
     setSaving(true);
     try {
       createLesson({
-        student_id: studentId,
+        student_id: studentEntry?.type === 'manual' ? selectedStudent : undefined,
+        student_profile_id: studentEntry?.type === 'profile' ? selectedStudent : undefined,
         subject,
-        date: dateTime.toISOString(),
-        duration_minutes: parseInt(duration) || 60,
+        date: dateTime,
+        duration_minutes: duration,
         status: 'scheduled',
         notes,
       });
@@ -84,7 +131,11 @@ export function BookLessonScreen({ navigation }: Props) {
     }
   }
 
-  if (students.length === 0) {
+  if (loadingAvailability) {
+    return <LoadingSpinner message="Loading..." />;
+  }
+
+  if (allStudents.length === 0) {
     return (
       <View style={styles.container}>
         <EmptyState title="No students yet" subtitle="Add a student before booking a lesson" />
@@ -96,71 +147,131 @@ export function BookLessonScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text style={styles.label}>Student *</Text>
-      <View style={styles.pickerWrapper}>
-        <Picker selectedValue={studentId} onValueChange={(val) => setStudentId(val)}>
-          {students.map((s) => (
-            <Picker.Item key={s.id} label={s.full_name} value={s.id} />
-          ))}
-        </Picker>
+    <ScrollView style={styles.container}>
+      <View style={styles.section}>
+        <Text style={styles.label}>Student *</Text>
+        <View style={styles.pickerWrapper}>
+          <Picker selectedValue={selectedStudent} onValueChange={setSelectedStudent}>
+            {allStudents.map((s) => (
+              <Picker.Item key={s.id} label={s.full_name} value={s.id} />
+            ))}
+          </Picker>
+        </View>
       </View>
 
-      <Input label="Subject" value={subject} onChangeText={setSubject} placeholder="e.g. Mathematics" />
-
-      <Text style={styles.label}>Date *</Text>
-      <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
-        <Text style={styles.pickerValue}>{dayjs(dateTime).format('dddd, MMM D, YYYY')}</Text>
-      </TouchableOpacity>
-      {showDatePicker && (
-        <DateTimePicker value={dateTime} mode="date" display="default" onChange={onDateChange} minimumDate={new Date()} />
-      )}
-
-      <Text style={styles.label}>Time *</Text>
-      <TouchableOpacity style={styles.input} onPress={() => setShowTimePicker(true)}>
-        <Text style={styles.pickerValue}>{dayjs(dateTime).format('HH:mm')}</Text>
-      </TouchableOpacity>
-      {showTimePicker && (
-        <DateTimePicker value={dateTime} mode="time" display="spinner" onChange={onTimeChange} minuteInterval={5} />
-      )}
-
-      <Input
-        label="Duration (minutes)"
-        value={duration}
-        onChangeText={setDuration}
-        keyboardType="numeric"
-        placeholder="e.g. 60"
+      <Calendar
+        markingType="custom"
+        markedDates={markedDates}
+        onDayPress={handleDayPress}
+        minDate={dayjs().format('YYYY-MM-DD')}
+        maxDate={dayjs().add(60, 'day').format('YYYY-MM-DD')}
+        theme={{ todayTextColor: colors.primary, arrowColor: colors.primary, textMonthFontWeight: '700' }}
       />
 
-      <Input
-        label="Notes"
-        value={notes}
-        onChangeText={setNotes}
-        placeholder="Any notes about this lesson..."
-        multiline
-        numberOfLines={4}
-        style={styles.textArea}
-      />
+      <View style={styles.legend}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: colors.successLight }]} />
+          <Text style={styles.legendText}>Your availability</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }]} />
+          <Text style={styles.legendText}>Outside availability</Text>
+        </View>
+      </View>
 
-      <Button title="Book Lesson" onPress={handleBook} loading={saving} style={styles.button} />
+      <Text style={styles.label}>Lesson Duration</Text>
+      <View style={styles.durationRow}>
+        {DURATIONS.map((d) => (
+          <TouchableOpacity
+            key={d}
+            style={[styles.durationChip, duration === d && styles.durationChipActive]}
+            onPress={() => { setDuration(d); setSelectedTime(null); }}
+          >
+            <Text style={[styles.durationChipText, duration === d && styles.durationChipTextActive]}>{d} min</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {selectedDate && (
+        <>
+          <Text style={styles.label}>Available Times — {dayjs(selectedDate).format('dddd, MMM D')}</Text>
+          <View style={styles.timeGrid}>
+            {timeSlots.map((slot) => (
+              <TouchableOpacity
+                key={slot.time}
+                disabled={!slot.available}
+                style={[
+                  styles.timeSlot,
+                  slot.available ? styles.timeSlotAvailable : styles.timeSlotUnavailable,
+                  selectedTime === slot.time && styles.timeSlotSelected,
+                ]}
+                onPress={() => setSelectedTime(slot.time)}
+              >
+                <Text
+                  style={[
+                    styles.timeSlotText,
+                    !slot.available && styles.timeSlotTextUnavailable,
+                    selectedTime === slot.time && styles.timeSlotTextSelected,
+                  ]}
+                >
+                  {slot.time}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
+
+      <View style={styles.formSection}>
+        <Input label="Subject" value={subject} onChangeText={setSubject} placeholder="e.g. Mathematics" />
+        <Input
+          label="Notes"
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="Any notes about this lesson..."
+          multiline
+          numberOfLines={4}
+          style={styles.textArea}
+        />
+        <Button
+          title="Book Lesson"
+          onPress={handleBook}
+          loading={saving}
+          disabled={!selectedDate || !selectedTime}
+          style={styles.button}
+        />
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
-  content: { padding: spacing.lg },
+  section: { padding: spacing.lg, paddingBottom: 0 },
   label: { ...typography.captionBold, color: colors.text, marginBottom: spacing.xs, marginTop: spacing.md },
-  input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md,
-    backgroundColor: colors.background, minHeight: 48, justifyContent: 'center',
-  },
-  pickerValue: { ...typography.body, color: colors.text },
   pickerWrapper: {
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
     backgroundColor: colors.background, overflow: 'hidden',
   },
+  legend: { flexDirection: 'row', gap: spacing.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  legendDot: { width: 12, height: 12, borderRadius: 3 },
+  legendText: { ...typography.small, color: colors.textSecondary },
+  durationRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg },
+  durationChip: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md + 2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  durationChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  durationChipText: { ...typography.captionBold, color: colors.textSecondary },
+  durationChipTextActive: { color: colors.textInverse },
+  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingHorizontal: spacing.lg },
+  timeSlot: { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md + 2, borderRadius: radius.md, minWidth: 70, alignItems: 'center' },
+  timeSlotAvailable: { backgroundColor: colors.successLight },
+  timeSlotUnavailable: { backgroundColor: colors.background },
+  timeSlotSelected: { backgroundColor: colors.primary },
+  timeSlotText: { ...typography.captionBold, color: colors.success },
+  timeSlotTextUnavailable: { color: colors.textMuted },
+  timeSlotTextSelected: { color: colors.textInverse },
+  formSection: { padding: spacing.lg },
   textArea: { height: 100, textAlignVertical: 'top' },
-  button: { marginTop: spacing.xl, marginBottom: spacing.xxl },
+  button: { marginTop: spacing.md, marginBottom: spacing.xl },
   bottomButton: { padding: spacing.lg },
 });
