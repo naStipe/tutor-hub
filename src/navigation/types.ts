@@ -20,3 +20,19 @@ export type StudentsStackParamList = {
   StudentList: undefined;
   StudentDetail: { studentId: string | null };
 };
+
+export type StudentTabParamList = {
+  BookLesson: undefined;
+  MyLessons: undefined;
+  Settings: undefined;
+};
+
+export type StudentLessonsStackParamList = {
+  StudentLessonList: undefined;
+  StudentLessonDetail: { lessonId: string };
+};
+
+export type StudentBookStackParamList = {
+  AvailabilityCalendar: undefined;
+  ConfirmBooking: { date: string; time: string };
+};

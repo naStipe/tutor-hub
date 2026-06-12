@@ -5,8 +5,8 @@ import { LessonListScreen } from '../screens/lessons/LessonListScreen';
 import { LessonDetailScreen } from '../screens/lessons/LessonDetailScreen';
 import { BookLessonScreen } from '../screens/lessons/BookLessonScreen';
 import { RescheduleLessonScreen } from '../screens/lessons/RescheduleLessonScreen';
-import { StudentListScreen } from '../screens/students/StudentListScreen';
-import { StudentDetailScreen } from '../screens/students/StudentDetailScreen';
+import { StudentListScreen } from '../screens/student/StudentListScreen';
+import { StudentDetailScreen } from '../screens/student/StudentDetailScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 
 const Tab = createBottomTabNavigator<AppTabParamList>();

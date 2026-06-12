@@ -1,20 +1,22 @@
-export type UserRole = 'tutor' | 'student';
+export type UserRole = 'tutor' | 'pending_tutor' | 'student';
 
 export interface Profile {
-  id: string;           // matches Supabase auth user id
+  id: string;
   email: string;
   full_name: string;
   role: UserRole;
+  tutor_approved: boolean;
+  invite_code?: string;
+  tutor_id?: string;
   created_at: string;
 }
 
-export interface Student {
+export interface Availability {
   id: string;
   tutor_id: string;
-  full_name: string;
-  email?: string;
-  phone?: string;
-  notes?: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
   created_at: string;
 }
 
@@ -23,10 +25,12 @@ export type LessonStatus = 'scheduled' | 'completed' | 'cancelled';
 export interface Lesson {
   id: string;
   tutor_id: string;
-  student_id: string;
-  student?: Student;    // joined from DB query
+  student_id?: string;
+  student_profile_id?: string;
+  student?: { id: string; full_name: string; email?: string; phone?: string };
+  student_profile?: Profile;
   subject?: string;
-  date: string;         // ISO timestamp
+  date: string;
   duration_minutes: number;
   status: LessonStatus;
   notes?: string;
