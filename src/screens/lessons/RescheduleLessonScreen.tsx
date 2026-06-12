@@ -6,12 +6,18 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
-  ActivityIndicator,
   Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLessons } from '../../hooks/useLessons';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { colors } from '../../constants/colors';
+import { spacing, radius } from '../../constants/spacing';
+import { typography } from '../../constants/typography';
 import dayjs from 'dayjs';
 
 type Props = NativeStackScreenProps<any, 'RescheduleLesson'>;
@@ -22,9 +28,7 @@ export function RescheduleLessonScreen({ route, navigation }: Props) {
 
   const lesson = lessons.find((l) => l.id === lessonId);
 
-  const [dateTime, setDateTime] = useState(
-    lesson ? new Date(lesson.date) : new Date()
-  );
+  const [dateTime, setDateTime] = useState(lesson ? new Date(lesson.date) : new Date());
   const [saving, setSaving] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -64,27 +68,16 @@ export function RescheduleLessonScreen({ route, navigation }: Props) {
     }
   }
 
-  if (isLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+  if (isLoading) return <LoadingSpinner message="Loading lesson..." />;
+  if (!lesson) return <EmptyState title="Lesson not found" />;
 
-  if (!lesson) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Lesson not found</Text>
-      </View>
-    );
-  }
+  const studentName = lesson.student?.full_name ?? lesson.student_profile?.full_name ?? 'Unknown';
 
   return (
-    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.infoCard}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <Card style={styles.infoCard}>
         <Text style={styles.infoLabel}>Student</Text>
-        <Text style={styles.infoValue}>{lesson.student?.full_name ?? 'Unknown'}</Text>
+        <Text style={styles.infoValue}>{studentName}</Text>
         {lesson.subject && (
           <>
             <Text style={styles.infoLabel}>Subject</Text>
@@ -92,10 +85,8 @@ export function RescheduleLessonScreen({ route, navigation }: Props) {
           </>
         )}
         <Text style={styles.infoLabel}>Current date</Text>
-        <Text style={styles.infoValue}>
-          {dayjs(lesson.date).format('MMM D, YYYY · HH:mm')}
-        </Text>
-      </View>
+        <Text style={styles.infoValue}>{dayjs(lesson.date).format('MMM D, YYYY · HH:mm')}</Text>
+      </Card>
 
       <Text style={styles.sectionTitle}>New date & time</Text>
 
@@ -104,13 +95,7 @@ export function RescheduleLessonScreen({ route, navigation }: Props) {
         <Text style={styles.pickerValue}>{dayjs(dateTime).format('dddd, MMM D, YYYY')}</Text>
       </TouchableOpacity>
       {showDatePicker && (
-        <DateTimePicker
-          value={dateTime}
-          mode="date"
-          display="default"
-          onChange={onDateChange}
-          minimumDate={new Date()}
-        />
+        <DateTimePicker value={dateTime} mode="date" display="default" onChange={onDateChange} minimumDate={new Date()} />
       )}
 
       <Text style={styles.label}>Time *</Text>
@@ -118,73 +103,26 @@ export function RescheduleLessonScreen({ route, navigation }: Props) {
         <Text style={styles.pickerValue}>{dayjs(dateTime).format('HH:mm')}</Text>
       </TouchableOpacity>
       {showTimePicker && (
-        <DateTimePicker
-          value={dateTime}
-          mode="time"
-          display="spinner"
-          onChange={onTimeChange}
-          minuteInterval={5}
-        />
+        <DateTimePicker value={dateTime} mode="time" display="spinner" onChange={onTimeChange} minuteInterval={5} />
       )}
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleReschedule}
-        disabled={saving}
-      >
-        <Text style={styles.buttonText}>
-          {saving ? 'Rescheduling...' : 'Confirm Reschedule'}
-        </Text>
-      </TouchableOpacity>
+      <Button title="Confirm Reschedule" onPress={handleReschedule} loading={saving} style={styles.button} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 16 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { fontSize: 16, color: '#EF4444' },
-  infoCard: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    padding: 16,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  infoLabel: { fontSize: 12, color: '#888', marginTop: 8 },
-  infoValue: { fontSize: 16, fontWeight: '600', color: '#111', marginTop: 2 },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111',
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 6,
-    marginTop: 16,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg },
+  infoCard: { marginBottom: spacing.sm },
+  infoLabel: { ...typography.small, color: colors.textMuted, marginTop: spacing.sm },
+  infoValue: { ...typography.bodyBold, color: colors.text, marginTop: spacing.xs },
+  sectionTitle: { ...typography.h3, color: colors.text, marginTop: spacing.xl, marginBottom: spacing.sm },
+  label: { ...typography.captionBold, color: colors.text, marginBottom: spacing.xs, marginTop: spacing.md },
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fafafa',
-    justifyContent: 'center',
-    minHeight: 48,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md,
+    backgroundColor: colors.surface, minHeight: 48, justifyContent: 'center',
   },
-  pickerValue: { fontSize: 16, color: '#111' },
-  button: {
-    backgroundColor: '#4F46E5',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 32,
-    marginBottom: 40,
-  },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  pickerValue: { ...typography.body, color: colors.text },
+  button: { marginTop: spacing.xxl, marginBottom: spacing.xxl },
 });

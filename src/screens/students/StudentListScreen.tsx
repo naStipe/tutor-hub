@@ -5,11 +5,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useStudents } from '../../hooks/useStudents';
 import { Student } from '../../types';
+import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { colors } from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
+import { typography } from '../../constants/typography';
 
 type Props = NativeStackScreenProps<any, 'StudentList'>;
 
@@ -22,128 +29,85 @@ export function StudentListScreen({ navigation }: Props) {
       `Are you sure you want to delete ${student.full_name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteStudent(student.id),
-        },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteStudent(student.id) },
       ]
     );
   }
 
   if (isLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <LoadingSpinner message="Loading students..." />;
   }
+
+  const hasAny = students.length > 0 || registeredStudents.length > 0;
 
   return (
     <View style={styles.container}>
-      {registeredStudents.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Registered Students</Text>
-          {registeredStudents.map((s) => (
-            <View key={s.id} style={styles.card}>
-              <View style={styles.cardContent}>
-                <Text style={styles.name}>{s.full_name}</Text>
-                <Text style={styles.detail}>{s.email}</Text>
-              </View>
-              <View style={styles.registeredBadge}>
-                <Text style={styles.registeredBadgeText}>App User</Text>
-              </View>
-            </View>
-          ))}
-          <Text style={styles.sectionTitle}>Manual Students</Text>
-        </View>
-      )}
       <FlatList
         data={students}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={students.length === 0 && styles.emptyContainer}
+        contentContainerStyle={!hasAny ? styles.emptyContainer : styles.listContent}
         ListEmptyComponent={
-          <View style={styles.centered}>
-            <Text style={styles.emptyText}>No students yet</Text>
-            <Text style={styles.emptySubtext}>Add your first student below</Text>
-          </View>
+          registeredStudents.length === 0 ? (
+            <EmptyState title="No students yet" subtitle="Add your first student below" />
+          ) : null
+        }
+        ListHeaderComponent={
+          registeredStudents.length > 0 ? (
+            <View>
+              <Text style={styles.sectionTitle}>Registered Students</Text>
+              {registeredStudents.map((s) => (
+                <Card key={s.id} style={styles.card}>
+                  <View style={styles.cardRow}>
+                    <View style={styles.cardContent}>
+                      <Text style={styles.name}>{s.full_name}</Text>
+                      {s.email && <Text style={styles.detail}>{s.email}</Text>}
+                    </View>
+                    <Badge label="App User" variant="success" />
+                  </View>
+                </Card>
+              ))}
+              {students.length > 0 && <Text style={styles.sectionTitle}>Manual Students</Text>}
+            </View>
+          ) : null
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => navigation.navigate('StudentDetail', { studentId: item.id })}
-          >
-            <View style={styles.cardContent}>
-              <Text style={styles.name}>{item.full_name}</Text>
-              {item.email && <Text style={styles.detail}>{item.email}</Text>}
-              {item.phone && <Text style={styles.detail}>{item.phone}</Text>}
-            </View>
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => handleDelete(item)}
-            >
-              <Text style={styles.deleteText}>Delete</Text>
-            </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('StudentDetail', { studentId: item.id })}>
+            <Card style={styles.card}>
+              <View style={styles.cardRow}>
+                <View style={styles.cardContent}>
+                  <Text style={styles.name}>{item.full_name}</Text>
+                  {item.email && <Text style={styles.detail}>{item.email}</Text>}
+                  {item.phone && <Text style={styles.detail}>{item.phone}</Text>}
+                </View>
+                <Text style={styles.deleteText} onPress={() => handleDelete(item)}>Delete</Text>
+              </View>
+            </Card>
           </TouchableOpacity>
         )}
       />
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('StudentDetail', { studentId: null })}
-      >
-        <Text style={styles.fabText}>+ Add Student</Text>
-      </TouchableOpacity>
+      <View style={styles.fabContainer}>
+        <Button title="+ Add Student" onPress={() => navigation.navigate('StudentDetail', { studentId: null })} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: 8 },
+  container: { flex: 1, backgroundColor: colors.background },
+  listContent: { padding: spacing.lg, paddingBottom: 0 },
+  emptyContainer: { flexGrow: 1 },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#888',
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 4,
+    ...typography.smallBold,
+    color: colors.textMuted,
     textTransform: 'uppercase',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
-  registeredBadge: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  registeredBadgeText: { color: '#fff', fontSize: 11, fontWeight: '600' },
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1 },
-  emptyText: { fontSize: 18, fontWeight: '600', color: '#333' },
-  emptySubtext: { fontSize: 14, color: '#666', marginTop: 8 },
-  card: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 10,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
+  card: { marginBottom: spacing.md },
+  cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardContent: { flex: 1 },
-  name: { fontSize: 16, fontWeight: '600', color: '#111' },
-  detail: { fontSize: 14, color: '#666', marginTop: 2 },
-  deleteButton: { padding: 8 },
-  deleteText: { color: '#EF4444', fontSize: 14, fontWeight: '500' },
-  fab: {
-    backgroundColor: '#4F46E5',
-    margin: 16,
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  fabText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  name: { ...typography.bodyBold, color: colors.text },
+  detail: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs / 2 },
+  deleteText: { ...typography.captionBold, color: colors.danger, padding: spacing.xs },
+  fabContainer: { padding: spacing.lg, backgroundColor: colors.background },
 });

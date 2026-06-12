@@ -1,20 +1,19 @@
 import { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useStudentLessons } from '../../hooks/useStudentLessons';
 import { useAuth } from '../../hooks/useAuth';
 import { useAvailability } from '../../hooks/useAvailability';
 import { useTutorBookedSlots } from '../../hooks/useTutorBookedSlots';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { colors } from '../../constants/colors';
+import { spacing, radius } from '../../constants/spacing';
+import { typography } from '../../constants/typography';
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 dayjs.extend(isSameOrBefore);
@@ -37,7 +36,6 @@ export function BookLessonScreen({ navigation }: Props) {
 
   const availableDays = useMemo(() => new Set(availability.map((a) => a.day_of_week)), [availability]);
 
-  // Mark calendar dates: green if tutor available that weekday, grey otherwise (only for upcoming dates)
   const markedDates = useMemo(() => {
     const marks: Record<string, any> = {};
     const today = dayjs();
@@ -47,13 +45,8 @@ export function BookLessonScreen({ navigation }: Props) {
       const isAvailable = availableDays.has(d.day());
       marks[dateStr] = {
         customStyles: {
-          container: {
-            backgroundColor: isAvailable ? '#D1FAE5' : '#F3F4F6',
-            borderRadius: 8,
-          },
-          text: {
-            color: isAvailable ? '#065F46' : '#9CA3AF',
-          },
+          container: { backgroundColor: isAvailable ? colors.successLight : colors.background, borderRadius: radius.md },
+          text: { color: isAvailable ? colors.success : colors.textMuted },
         },
         disabled: !isAvailable,
       };
@@ -62,15 +55,14 @@ export function BookLessonScreen({ navigation }: Props) {
       marks[selectedDate] = {
         ...(marks[selectedDate] || {}),
         customStyles: {
-          container: { backgroundColor: '#4F46E5', borderRadius: 8 },
-          text: { color: '#fff', fontWeight: 'bold' },
+          container: { backgroundColor: colors.primary, borderRadius: radius.md },
+          text: { color: colors.textInverse, fontWeight: 'bold' },
         },
       };
     }
     return marks;
   }, [availableDays, selectedDate]);
 
-  // Generate 15-min time slots for the selected date based on availability
   const timeSlots = useMemo(() => {
     if (!selectedDate) return [];
     const dayOfWeek = dayjs(selectedDate).day();
@@ -84,30 +76,16 @@ export function BookLessonScreen({ navigation }: Props) {
     let current = dayjs(selectedDate).hour(startH).minute(startM).second(0);
     const end = dayjs(selectedDate).hour(endH).minute(endM).second(0);
 
-    // Booked slots for this day
     const dayBooked = bookedSlots
-      .map((b) => ({
-        start: dayjs(b.date),
-        end: dayjs(b.date).add(b.duration_minutes, 'minute'),
-      }))
+      .map((b) => ({ start: dayjs(b.date), end: dayjs(b.date).add(b.duration_minutes, 'minute') }))
       .filter((b) => b.start.format('YYYY-MM-DD') === selectedDate);
 
     while (current.add(duration, 'minute').isSameOrBefore(end)) {
       const slotEnd = current.add(duration, 'minute');
-
-      // Check conflict with any booked lesson
-      const conflicts = dayBooked.some(
-        (b) => current.isBefore(b.end) && slotEnd.isAfter(b.start)
-      );
-
-      // Don't show past time slots for today
+      const conflicts = dayBooked.some((b) => current.isBefore(b.end) && slotEnd.isAfter(b.start));
       const isPast = current.isBefore(dayjs());
 
-      slots.push({
-        time: current.format('HH:mm'),
-        available: !conflicts && !isPast,
-      });
-
+      slots.push({ time: current.format('HH:mm'), available: !conflicts && !isPast });
       current = current.add(15, 'minute');
     }
 
@@ -115,9 +93,7 @@ export function BookLessonScreen({ navigation }: Props) {
   }, [selectedDate, availability, duration, bookedSlots]);
 
   function handleDayPress(day: DateData) {
-    if (!availableDays.has(dayjs(day.dateString).day())) {
-      return; // disabled day
-    }
+    if (!availableDays.has(dayjs(day.dateString).day())) return;
     setSelectedDate(day.dateString);
     setSelectedTime(null);
   }
@@ -143,20 +119,11 @@ export function BookLessonScreen({ navigation }: Props) {
   }
 
   if (loadingAvailability || loadingBooked) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <LoadingSpinner message="Loading availability..." />;
   }
 
   if (availability.length === 0) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.emptyText}>Your tutor hasn't set availability yet</Text>
-        <Text style={styles.emptySubtext}>Please check back later</Text>
-      </View>
-    );
+    return <EmptyState title="Your tutor hasn't set availability yet" subtitle="Please check back later" />;
   }
 
   return (
@@ -167,16 +134,16 @@ export function BookLessonScreen({ navigation }: Props) {
         onDayPress={handleDayPress}
         minDate={dayjs().format('YYYY-MM-DD')}
         maxDate={dayjs().add(60, 'day').format('YYYY-MM-DD')}
-        theme={{ todayTextColor: '#4F46E5', arrowColor: '#4F46E5' }}
+        theme={{ todayTextColor: colors.primary, arrowColor: colors.primary, textMonthFontWeight: '700' }}
       />
 
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#D1FAE5' }]} />
+          <View style={[styles.legendDot, { backgroundColor: colors.successLight }]} />
           <Text style={styles.legendText}>Available</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#F3F4F6' }]} />
+          <View style={[styles.legendDot, { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }]} />
           <Text style={styles.legendText}>Unavailable</Text>
         </View>
       </View>
@@ -187,25 +154,18 @@ export function BookLessonScreen({ navigation }: Props) {
           <TouchableOpacity
             key={d}
             style={[styles.durationChip, duration === d && styles.durationChipActive]}
-            onPress={() => {
-              setDuration(d);
-              setSelectedTime(null);
-            }}
+            onPress={() => { setDuration(d); setSelectedTime(null); }}
           >
-            <Text style={[styles.durationChipText, duration === d && styles.durationChipTextActive]}>
-              {d} min
-            </Text>
+            <Text style={[styles.durationChipText, duration === d && styles.durationChipTextActive]}>{d} min</Text>
           </TouchableOpacity>
         ))}
       </View>
 
       {selectedDate && (
         <>
-          <Text style={styles.label}>
-            Available Times — {dayjs(selectedDate).format('dddd, MMM D')}
-          </Text>
+          <Text style={styles.label}>Available Times — {dayjs(selectedDate).format('dddd, MMM D')}</Text>
           {timeSlots.length === 0 ? (
-            <Text style={styles.emptySubtext}>No slots available for this duration</Text>
+            <Text style={styles.emptyText}>No slots available for this duration</Text>
           ) : (
             <View style={styles.timeGrid}>
               {timeSlots.map((slot) => (
@@ -235,58 +195,41 @@ export function BookLessonScreen({ navigation }: Props) {
         </>
       )}
 
-      <Text style={styles.label}>Subject / Topic</Text>
-      <TextInput
-        style={styles.input}
-        value={subject}
-        onChangeText={setSubject}
-        placeholder="e.g. Algebra homework help"
-      />
-
-      <TouchableOpacity
-        style={[styles.button, (!selectedDate || !selectedTime) && styles.buttonDisabled]}
-        onPress={handleBook}
-        disabled={saving || !selectedDate || !selectedTime}
-      >
-        <Text style={styles.buttonText}>
-          {saving ? 'Booking...' : 'Request Lesson'}
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.formSection}>
+        <Input label="Subject / Topic" value={subject} onChangeText={setSubject} placeholder="e.g. Algebra homework help" />
+        <Button
+          title="Request Lesson"
+          onPress={handleBook}
+          loading={saving}
+          disabled={!selectedDate || !selectedTime}
+          style={styles.button}
+        />
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#333', textAlign: 'center' },
-  emptySubtext: { fontSize: 14, color: '#666', marginTop: 8, textAlign: 'center', paddingHorizontal: 16 },
-  legend: { flexDirection: 'row', gap: 16, paddingHorizontal: 16, paddingVertical: 8 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  container: { flex: 1, backgroundColor: colors.surface },
+  legend: { flexDirection: 'row', gap: spacing.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   legendDot: { width: 12, height: 12, borderRadius: 3 },
-  legendText: { fontSize: 12, color: '#666' },
-  label: { fontSize: 14, fontWeight: '700', color: '#333', marginTop: 16, marginHorizontal: 16, marginBottom: 8 },
-  durationRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16 },
-  durationChip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1, borderColor: '#ddd' },
-  durationChipActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
-  durationChipText: { fontSize: 13, color: '#666', fontWeight: '600' },
-  durationChipTextActive: { color: '#fff' },
-  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16 },
-  timeSlot: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, minWidth: 70, alignItems: 'center' },
-  timeSlotAvailable: { backgroundColor: '#D1FAE5' },
-  timeSlotUnavailable: { backgroundColor: '#F3F4F6' },
-  timeSlotSelected: { backgroundColor: '#4F46E5' },
-  timeSlotText: { fontSize: 13, fontWeight: '600', color: '#065F46' },
-  timeSlotTextUnavailable: { color: '#9CA3AF' },
-  timeSlotTextSelected: { color: '#fff' },
-  input: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12,
-    fontSize: 16, backgroundColor: '#fafafa', marginHorizontal: 16,
-  },
-  button: {
-    backgroundColor: '#4F46E5', padding: 16, borderRadius: 10,
-    alignItems: 'center', marginTop: 32, marginHorizontal: 16, marginBottom: 40,
-  },
-  buttonDisabled: { backgroundColor: '#ccc' },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  legendText: { ...typography.small, color: colors.textSecondary },
+  label: { ...typography.captionBold, color: colors.text, marginTop: spacing.lg, marginHorizontal: spacing.lg, marginBottom: spacing.sm },
+  durationRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg },
+  durationChip: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md + 2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  durationChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  durationChipText: { ...typography.captionBold, color: colors.textSecondary },
+  durationChipTextActive: { color: colors.textInverse },
+  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingHorizontal: spacing.lg },
+  timeSlot: { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md + 2, borderRadius: radius.md, minWidth: 70, alignItems: 'center' },
+  timeSlotAvailable: { backgroundColor: colors.successLight },
+  timeSlotUnavailable: { backgroundColor: colors.background },
+  timeSlotSelected: { backgroundColor: colors.primary },
+  timeSlotText: { ...typography.captionBold, color: colors.success },
+  timeSlotTextUnavailable: { color: colors.textMuted },
+  timeSlotTextSelected: { color: colors.textInverse },
+  emptyText: { ...typography.caption, color: colors.textSecondary, marginHorizontal: spacing.lg },
+  formSection: { padding: spacing.lg },
+  button: { marginTop: spacing.md, marginBottom: spacing.xl },
 });

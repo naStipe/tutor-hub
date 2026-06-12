@@ -1,5 +1,9 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { signOut } from '../../supabase/auth';
+import { Button } from '../../components/ui/Button';
+import { colors } from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
+import { typography } from '../../constants/typography';
 
 export function PendingApprovalScreen() {
   async function handleSignOut() {
@@ -17,9 +21,7 @@ export function PendingApprovalScreen() {
         Your tutor account is currently under review. You'll be able to access
         the app once an administrator approves your account.
       </Text>
-      <TouchableOpacity style={styles.button} onPress={handleSignOut}>
-        <Text style={styles.buttonText}>Sign Out</Text>
-      </TouchableOpacity>
+      <Button title="Sign Out" onPress={handleSignOut} variant="danger" style={styles.button} />
     </View>
   );
 }
@@ -29,11 +31,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#fff',
+    padding: spacing.xl,
+    backgroundColor: colors.surface,
   },
-  title: { fontSize: 22, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
-  text: { fontSize: 15, color: '#666', textAlign: 'center', marginBottom: 32, lineHeight: 22 },
-  button: { backgroundColor: '#EF4444', padding: 16, borderRadius: 8, paddingHorizontal: 32 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  title: { ...typography.h3, color: colors.text, marginBottom: spacing.md, textAlign: 'center' },
+  text: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xxl, lineHeight: 22 },
+  button: { width: '100%' },
 });

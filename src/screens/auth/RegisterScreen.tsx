@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -14,6 +13,11 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/types';
 import { signUp } from '../../supabase/auth';
 import { supabase } from '../../supabase/config';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { colors } from '../../constants/colors';
+import { spacing, radius } from '../../constants/spacing';
+import { typography } from '../../constants/typography';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 type Role = 'tutor' | 'student';
@@ -80,9 +84,11 @@ export function RegisterScreen({ navigation }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Start managing your lessons</Text>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>Start managing your lessons</Text>
+        </View>
 
         <View style={styles.roleSelector}>
           <TouchableOpacity
@@ -103,23 +109,20 @@ export function RegisterScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
-        <TextInput
-          style={styles.input}
+        <Input
           placeholder="Full Name"
           value={fullName}
           onChangeText={setFullName}
           autoCapitalize="words"
         />
-        <TextInput
-          style={styles.input}
+        <Input
           placeholder="Email"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
         />
-        <TextInput
-          style={styles.input}
+        <Input
           placeholder="Password"
           value={password}
           onChangeText={setPassword}
@@ -127,8 +130,7 @@ export function RegisterScreen({ navigation }: Props) {
         />
 
         {role === 'student' && (
-          <TextInput
-            style={styles.input}
+          <Input
             placeholder="Tutor's Invite Code"
             value={inviteCode}
             onChangeText={setInviteCode}
@@ -136,55 +138,35 @@ export function RegisterScreen({ navigation }: Props) {
           />
         )}
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? 'Creating account...' : 'Create Account'}
-          </Text>
-        </TouchableOpacity>
+        <Button title="Create Account" onPress={handleRegister} loading={loading} style={styles.button} />
 
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.link}>Already have an account? Sign in</Text>
-        </TouchableOpacity>
+        <Text style={styles.link} onPress={() => navigation.navigate('Login')}>
+          Already have an account? <Text style={styles.linkBold}>Sign in</Text>
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: '#fff' },
-  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 8, textAlign: 'center', marginTop: 40 },
-  subtitle: { fontSize: 16, color: '#666', marginBottom: 24, textAlign: 'center' },
-  roleSelector: { flexDirection: 'row', gap: 12, marginBottom: 24 },
+  container: { flex: 1, backgroundColor: colors.surface },
+  scrollContent: { padding: spacing.xl, paddingTop: spacing.xxxl },
+  header: { marginBottom: spacing.xl, alignItems: 'center' },
+  title: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
+  subtitle: { ...typography.body, color: colors.textSecondary },
+  roleSelector: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
   roleButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 8,
+    padding: spacing.md + 2,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     alignItems: 'center',
   },
-  roleButtonActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
-  roleButtonText: { fontSize: 14, fontWeight: '600', color: '#666' },
-  roleButtonTextActive: { color: '#fff' },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#4F46E5',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  link: { color: '#4F46E5', textAlign: 'center', fontSize: 14, marginBottom: 40 },
+  roleButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  roleButtonText: { ...typography.captionBold, color: colors.textSecondary },
+  roleButtonTextActive: { color: colors.textInverse },
+  button: { marginBottom: spacing.lg, marginTop: spacing.sm },
+  link: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xxxl },
+  linkBold: { color: colors.primary, fontWeight: '600' },
 });
