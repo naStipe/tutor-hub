@@ -27,7 +27,7 @@ export async function bookLessonAsStudent(
       date,
       duration_minutes: durationMinutes,
       subject,
-      status: 'scheduled',
+      status: 'pending',
     })
     .select()
     .single();

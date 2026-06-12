@@ -16,6 +16,7 @@ type Props = NativeStackScreenProps<any, 'StudentLessonList'>;
 
 function statusColor(status: string) {
   switch (status) {
+    case 'pending': return '#F59E0B';
     case 'scheduled': return '#4F46E5';
     case 'completed': return '#10B981';
     case 'cancelled': return '#EF4444';
@@ -73,11 +74,8 @@ export function StudentLessonListScreen({ navigation }: Props) {
             </View>
             <Text style={styles.duration}>{item.duration_minutes} min</Text>
             {item.subject && <Text style={styles.subject}>{item.subject}</Text>}
-            {item.status === 'scheduled' && (
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => handleCancel(item)}
-              >
+            {(item.status === 'scheduled' || item.status === 'pending') && (
+              <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancel(item)}>
                 <Text style={styles.cancelText}>Cancel Lesson</Text>
               </TouchableOpacity>
             )}

@@ -14,7 +14,7 @@ import { Student } from '../../types';
 type Props = NativeStackScreenProps<any, 'StudentList'>;
 
 export function StudentListScreen({ navigation }: Props) {
-  const { students, isLoading, deleteStudent } = useStudents();
+  const { students, registeredStudents, isLoading, deleteStudent } = useStudents();
 
   function handleDelete(student: Student) {
     Alert.alert(
@@ -41,6 +41,23 @@ export function StudentListScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
+      {registeredStudents.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Registered Students</Text>
+          {registeredStudents.map((s) => (
+            <View key={s.id} style={styles.card}>
+              <View style={styles.cardContent}>
+                <Text style={styles.name}>{s.full_name}</Text>
+                <Text style={styles.detail}>{s.email}</Text>
+              </View>
+              <View style={styles.registeredBadge}>
+                <Text style={styles.registeredBadgeText}>App User</Text>
+              </View>
+            </View>
+          ))}
+          <Text style={styles.sectionTitle}>Manual Students</Text>
+        </View>
+      )}
       <FlatList
         data={students}
         keyExtractor={(item) => item.id}
@@ -81,6 +98,23 @@ export function StudentListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  section: { marginTop: 8 },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#888',
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  registeredBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  registeredBadgeText: { color: '#fff', fontSize: 11, fontWeight: '600' },
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { flex: 1 },

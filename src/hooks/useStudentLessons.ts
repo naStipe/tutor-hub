@@ -22,7 +22,11 @@ export function useStudentLessons() {
       durationMinutes: number;
       subject?: string;
     }) => bookLessonAsStudent(profile!.tutor_id!, user!.id, date, durationMinutes, subject),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['student-lessons'] }),
+    onSuccess: (data) => {
+      console.log('Lesson booked:', data);
+      queryClient.invalidateQueries({ queryKey: ['student-lessons'] });
+    },
+    onError: (error) => console.error('Booking error:', error),
   });
 
   const cancelMutation = useMutation({

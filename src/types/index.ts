@@ -20,7 +20,17 @@ export interface Availability {
   created_at: string;
 }
 
-export type LessonStatus = 'scheduled' | 'completed' | 'cancelled';
+export interface Student {
+  id: string;
+  tutor_id: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  created_at: string;
+}
+
+export type LessonStatus = 'pending' | 'scheduled' | 'completed' | 'cancelled';
 
 export interface Lesson {
   id: string;

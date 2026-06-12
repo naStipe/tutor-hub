@@ -18,6 +18,7 @@ type Props = NativeStackScreenProps<any, 'LessonList'>;
 
 function statusColor(status: string) {
   switch (status) {
+    case 'pending': return '#F59E0B';
     case 'scheduled': return '#4F46E5';
     case 'completed': return '#10B981';
     case 'cancelled': return '#EF4444';
@@ -26,7 +27,7 @@ function statusColor(status: string) {
 }
 
 export function LessonListScreen({ navigation }: Props) {
-  const { lessons, isLoading, cancelLesson } = useLessons();
+  const { lessons, isLoading, cancelLesson, approveLesson, rejectLesson } = useLessons();
   const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
 
   // Build marked dates for the calendar
@@ -73,6 +74,28 @@ export function LessonListScreen({ navigation }: Props) {
     );
   }
 
+  function handleApprove(lesson: Lesson) {
+    Alert.alert(
+      'Approve Lesson',
+      `Approve lesson request from ${lesson.student_profile?.full_name ?? lesson.student?.full_name} on ${dayjs(lesson.date).format('MMM D, YYYY · HH:mm')}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Approve', onPress: () => approveLesson(lesson.id) },
+      ]
+    );
+  }
+
+  function handleReject(lesson: Lesson) {
+    Alert.alert(
+      'Reject Lesson',
+      'Are you sure you want to reject this lesson request?',
+      [
+        { text: 'No', style: 'cancel' },
+        { text: 'Reject', style: 'destructive', onPress: () => rejectLesson(lesson.id) },
+      ]
+    );
+  }
+
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -114,7 +137,7 @@ export function LessonListScreen({ navigation }: Props) {
           >
             <View style={styles.cardHeader}>
               <Text style={styles.studentName}>
-                {item.student?.full_name ?? 'Unknown Student'}
+                {item.student?.full_name ?? item.student_profile?.full_name ?? 'Unknown Student'}
               </Text>
               <View style={[styles.badge, { backgroundColor: statusColor(item.status) }]}>
                 <Text style={styles.badgeText}>{item.status}</Text>
@@ -123,6 +146,16 @@ export function LessonListScreen({ navigation }: Props) {
             <Text style={styles.time}>{dayjs(item.date).format('HH:mm')}</Text>
             <Text style={styles.duration}>{item.duration_minutes} min</Text>
             {item.subject && <Text style={styles.subject}>{item.subject}</Text>}
+            {item.status === 'pending' && (
+              <View style={styles.actions}>
+                <TouchableOpacity style={styles.actionButton} onPress={() => handleApprove(item)}>
+                  <Text style={styles.actionTextSuccess}>Approve</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={() => handleReject(item)}>
+                  <Text style={styles.actionTextDanger}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            )}
             {item.status === 'scheduled' && (
               <View style={styles.actions}>
                 <TouchableOpacity
@@ -198,6 +231,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   actionButton: { paddingVertical: 4 },
+  actionTextSuccess: { color: '#10B981', fontWeight: '600', fontSize: 14 },
   actionTextPrimary: { color: '#4F46E5', fontWeight: '600', fontSize: 14 },
   actionTextDanger: { color: '#EF4444', fontWeight: '600', fontSize: 14 },
   fab: {

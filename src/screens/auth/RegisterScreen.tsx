@@ -59,22 +59,7 @@ export function RegisterScreen({ navigation }: Props) {
         tutorId = tutor.id;
       }
 
-      const data = await signUp(email, password, fullName);
-
-      if (data.user) {
-        const { error: updateError, data: updateData } = await supabase
-          .from('profiles')
-          .update({
-            role: role === 'tutor' ? 'pending_tutor' : 'student',
-            tutor_id: tutorId,
-          })
-          .eq('id', data.user.id)
-          .select();
-
-        console.log('Update result:', updateData, updateError);
-
-        if (updateError) throw updateError;
-      }
+      await signUp(email, password, fullName, role, tutorId);
 
       Alert.alert(
         'Account created',

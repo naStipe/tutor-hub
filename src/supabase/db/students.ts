@@ -1,5 +1,18 @@
 import { supabase } from '../config';
 import { Student } from '../../types';
+import { Profile } from '../../types';
+
+export async function getRegisteredStudents(tutorId: string): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('tutor_id', tutorId)
+    .eq('role', 'student')
+    .order('full_name', { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
 
 export async function getStudents(tutorId: string): Promise<Student[]> {
   const { data, error } = await supabase

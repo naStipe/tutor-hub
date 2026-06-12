@@ -7,6 +7,8 @@ import {
   cancelLesson,
   rescheduleLesson,
   deleteLesson,
+  approveLesson,
+  rejectLesson,
 } from '../supabase/db/lessons';
 import { Lesson } from '../types';
 
@@ -50,6 +52,16 @@ export function useLessons() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lessons'] }),
   });
 
+  const approveMutation = useMutation({
+    mutationFn: (lessonId: string) => approveLesson(lessonId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lessons'] }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (lessonId: string) => rejectLesson(lessonId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lessons'] }),
+  });
+
   return {
     lessons: lessonsQuery.data ?? [],
     isLoading: lessonsQuery.isLoading,
@@ -59,5 +71,7 @@ export function useLessons() {
     cancelLesson: cancelMutation.mutate,
     rescheduleLesson: rescheduleMutation.mutate,
     deleteLesson: deleteMutation.mutate,
+    approveLesson: approveMutation.mutate,
+    rejectLesson: rejectMutation.mutate,
   };
 }

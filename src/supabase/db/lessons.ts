@@ -6,7 +6,8 @@ export async function getLessons(tutorId: string): Promise<Lesson[]> {
     .from('lessons')
     .select(`
       *,
-      student:students(*)
+      student:students(*),
+      student_profile:profiles!lessons_student_profile_id_fkey(*)
     `)
     .eq('tutor_id', tutorId)
     .order('date', { ascending: true });
@@ -20,7 +21,8 @@ export async function getLesson(lessonId: string): Promise<Lesson> {
     .from('lessons')
     .select(`
       *,
-      student:students(*)
+      student:students(*),
+      student_profile:profiles!lessons_student_profile_id_fkey(*)
     `)
     .eq('id', lessonId)
     .single();
@@ -76,4 +78,12 @@ export async function deleteLesson(lessonId: string): Promise<void> {
     .eq('id', lessonId);
 
   if (error) throw error;
+}
+
+export async function approveLesson(lessonId: string): Promise<Lesson> {
+  return updateLesson(lessonId, { status: 'scheduled' });
+}
+
+export async function rejectLesson(lessonId: string): Promise<Lesson> {
+  return updateLesson(lessonId, { status: 'cancelled' });
 }

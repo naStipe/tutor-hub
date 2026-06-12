@@ -7,6 +7,9 @@ import {
   deleteStudent,
 } from '../supabase/db/students';
 import { Student } from '../types';
+import { getRegisteredStudents } from '../supabase/db/students';
+
+
 
 export function useStudents() {
   const { user } = useAuth();
@@ -15,6 +18,12 @@ export function useStudents() {
   const studentsQuery = useQuery({
     queryKey: ['students', user?.id],
     queryFn: () => getStudents(user!.id),
+    enabled: !!user,
+  });
+
+  const registeredStudentsQuery = useQuery({
+    queryKey: ['registered-students', user?.id],
+    queryFn: () => getRegisteredStudents(user!.id),
     enabled: !!user,
   });
 
@@ -45,5 +54,7 @@ export function useStudents() {
     createStudent: createMutation.mutate,
     updateStudent: updateMutation.mutate,
     deleteStudent: deleteMutation.mutate,
+    registeredStudents: registeredStudentsQuery.data ?? [],
+    isLoadingRegistered: registeredStudentsQuery.isLoading,
   };
 }

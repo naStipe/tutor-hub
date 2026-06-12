@@ -1,5 +1,5 @@
 import { NavigationContainer } from '@react-navigation/native';
-import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { AuthNavigator } from './AuthNavigator';
 import { TabNavigator } from './TabNavigator';
@@ -25,7 +25,6 @@ export function AppNavigator() {
     );
   }
 
-  // User is logged in but profile hasn't loaded yet
   if (!profile) {
     return (
       <View style={styles.centered}>
