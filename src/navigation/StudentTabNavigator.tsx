@@ -1,8 +1,8 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StudentTabParamList, StudentLessonsStackParamList } from './types';
-import { BookLessonScreen } from '../screens/student/BookLessonScreen';
-import { StudentLessonListScreen } from '../screens/student/StudentLessonListScreen';
+import { BookLessonScreen } from '../screens/students/BookLessonScreen';
+import { StudentLessonListScreen } from '../screens/students/StudentLessonListScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 
 const Tab = createBottomTabNavigator<StudentTabParamList>();

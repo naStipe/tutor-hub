@@ -11,7 +11,7 @@ export function useStudentLessons() {
   const queryClient = useQueryClient();
 
   const lessonsQuery = useQuery({
-    queryKey: ['student-lessons', user?.id],
+    queryKey: ['students-lessons', user?.id],
     queryFn: () => getStudentLessons(user!.id),
     enabled: !!user,
   });
@@ -24,14 +24,14 @@ export function useStudentLessons() {
     }) => bookLessonAsStudent(profile!.tutor_id!, user!.id, date, durationMinutes, subject),
     onSuccess: (data) => {
       console.log('Lesson booked:', data);
-      queryClient.invalidateQueries({ queryKey: ['student-lessons'] });
+      queryClient.invalidateQueries({ queryKey: ['students-lessons'] });
     },
     onError: (error) => console.error('Booking error:', error),
   });
 
   const cancelMutation = useMutation({
     mutationFn: (lessonId: string) => cancelStudentLesson(lessonId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['student-lessons'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['students-lessons'] }),
   });
 
   return {

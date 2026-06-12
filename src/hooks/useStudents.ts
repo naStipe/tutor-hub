@@ -31,7 +31,7 @@ export function useStudents() {
     mutationFn: (student: Omit<Student, 'id' | 'tutor_id' | 'created_at'>) =>
       createStudent(user!.id, student),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['students'] }),
-    onError: (error) => console.error('Create student error:', error),
+    onError: (error) => console.error('Create students error:', error),
   });
 
   const updateMutation = useMutation({

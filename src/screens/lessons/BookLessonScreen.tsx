@@ -56,7 +56,7 @@ export function BookLessonScreen({ navigation }: Props) {
 
   async function handleBook() {
     if (!studentId) {
-      Alert.alert('Error', 'Please add a student first');
+      Alert.alert('Error', 'Please add a students first');
       return;
     }
 

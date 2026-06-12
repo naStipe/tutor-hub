@@ -36,3 +36,8 @@ export type StudentBookStackParamList = {
   AvailabilityCalendar: undefined;
   ConfirmBooking: { date: string; time: string };
 };
+
+export type SettingsStackParamList = {
+  Settings: undefined;
+  Availability: undefined;
+};
