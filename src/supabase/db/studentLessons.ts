@@ -12,6 +12,17 @@ export async function getStudentLessons(studentProfileId: string): Promise<Lesso
   return data;
 }
 
+export async function getTutorBookedSlots(tutorId: string): Promise<{ date: string; duration_minutes: number }[]> {
+  const { data, error } = await supabase
+    .from('lessons')
+    .select('date, duration_minutes')
+    .eq('tutor_id', tutorId)
+    .in('status', ['pending', 'scheduled']);
+
+  if (error) throw error;
+  return data;
+}
+
 export async function bookLessonAsStudent(
   tutorId: string,
   studentProfileId: string,

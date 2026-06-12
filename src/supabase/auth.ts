@@ -29,8 +29,6 @@ export async function signIn(email: string, password: string) {
     password,
   });
 
-  console.log('signIn result:', JSON.stringify(data), error);
-
   if (error) throw error;
   return data;
 }

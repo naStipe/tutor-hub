@@ -23,8 +23,6 @@ export function useAuth(): AuthState {
       .eq('id', userId)
       .single();
 
-    console.log('fetchProfile result:', data, error);
-
     if (!error && data) setProfile(data);
   }
 
