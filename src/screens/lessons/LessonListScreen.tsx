@@ -49,11 +49,16 @@ export function LessonListScreen({ navigation }: Props) {
 
   const markedDates = useMemo(() => {
     const marks: Record<string, any> = {};
+    const dayDots: Record<string, { color: string }[]> = {};
 
     lessons.forEach((lesson) => {
       const dateKey = dayjs(lesson.date).format('YYYY-MM-DD');
-      if (!marks[dateKey]) marks[dateKey] = { dots: [] };
-      marks[dateKey].dots.push({ color: statusDotColor(lesson.status) });
+      if (!dayDots[dateKey]) dayDots[dateKey] = [];
+      dayDots[dateKey].push({ color: statusDotColor(lesson.status) });
+    });
+
+    Object.entries(dayDots).forEach(([dateKey, dots]) => {
+      marks[dateKey] = { dots: dots.slice(0, 6) };
     });
 
     marks[selectedDate] = {
@@ -64,6 +69,11 @@ export function LessonListScreen({ navigation }: Props) {
 
     return marks;
   }, [lessons, selectedDate]);
+
+  const pendingCount = useMemo(
+    () => lessons.filter((l) => l.status === 'pending').length,
+    [lessons]
+  );
 
   const dayLessons = useMemo(() => {
     return lessons
@@ -112,6 +122,20 @@ export function LessonListScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
+      {pendingCount > 0 && (
+        <TouchableOpacity
+          style={styles.pendingBanner}
+          onPress={() => {
+            const firstPending = lessons.find((l) => l.status === 'pending');
+            if (firstPending) setSelectedDate(dayjs(firstPending.date).format('YYYY-MM-DD'));
+          }}
+        >
+          <Badge label={`${pendingCount} pending`} variant="warning" />
+          <Text style={styles.pendingBannerText}>
+            {pendingCount === 1 ? 'lesson needs approval' : 'lessons need approval'}
+          </Text>
+        </TouchableOpacity>
+      )}
       <Calendar
         markingType="multi-dot"
         markedDates={markedDates}
@@ -203,4 +227,13 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   actionButton: { flex: 1, paddingVertical: spacing.sm },
   fabContainer: { padding: spacing.lg, backgroundColor: colors.background },
+  pendingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.warningLight,
+  },
+  pendingBannerText: { ...typography.caption, color: colors.text },
 });

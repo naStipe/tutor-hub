@@ -8,7 +8,7 @@ import { colors } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { typography } from '../../constants/typography';
 
-type Props = NativeStackScreenProps<any, 'Settings'>;
+type Props = NativeStackScreenProps<any, 'SettingsHome'>;
 
 export function SettingsScreen({ navigation }: Props) {
   const { profile } = useAuth();

@@ -38,6 +38,6 @@ export type StudentBookStackParamList = {
 };
 
 export type SettingsStackParamList = {
-  Settings: undefined;
+  SettingsHome: undefined;
   Availability: undefined;
 };

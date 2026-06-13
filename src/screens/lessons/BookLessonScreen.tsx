@@ -16,6 +16,8 @@ import { typography } from '../../constants/typography';
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 dayjs.extend(isSameOrBefore);
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+dayjs.extend(isSameOrAfter);
 
 type Props = NativeStackScreenProps<any, 'BookLesson'>;
 
@@ -196,28 +198,37 @@ export function BookLessonScreen({ navigation }: Props) {
         <>
           <Text style={styles.label}>Available Times — {dayjs(selectedDate).format('dddd, MMM D')}</Text>
           <View style={styles.timeGrid}>
-            {timeSlots.map((slot) => (
-              <TouchableOpacity
-                key={slot.time}
-                disabled={!slot.available}
-                style={[
-                  styles.timeSlot,
-                  slot.available ? styles.timeSlotAvailable : styles.timeSlotUnavailable,
-                  selectedTime === slot.time && styles.timeSlotSelected,
-                ]}
-                onPress={() => setSelectedTime(slot.time)}
-              >
-                <Text
+            {timeSlots.map((slot) => {
+              const isInSelectedSpan = selectedTime && (() => {
+                const slotStart = dayjs(`${selectedDate} ${slot.time}`);
+                const selectedStart = dayjs(`${selectedDate} ${selectedTime}`);
+                const selectedEnd = selectedStart.add(duration, 'minute');
+                return slotStart.isSameOrAfter(selectedStart) && slotStart.isBefore(selectedEnd);
+              })();
+
+              return (
+                <TouchableOpacity
+                  key={slot.time}
+                  disabled={!slot.available}
                   style={[
-                    styles.timeSlotText,
-                    !slot.available && styles.timeSlotTextUnavailable,
-                    selectedTime === slot.time && styles.timeSlotTextSelected,
+                    styles.timeSlot,
+                    slot.available ? styles.timeSlotAvailable : styles.timeSlotUnavailable,
+                    isInSelectedSpan && styles.timeSlotSelected,
                   ]}
+                  onPress={() => setSelectedTime(slot.time)}
                 >
-                  {slot.time}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.timeSlotText,
+                      !slot.available && styles.timeSlotTextUnavailable,
+                      isInSelectedSpan && styles.timeSlotTextSelected,
+                    ]}
+                  >
+                    {slot.time}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </>
       )}

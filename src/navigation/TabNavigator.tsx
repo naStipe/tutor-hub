@@ -40,7 +40,7 @@ function StudentsNavigator() {
 function SettingsNavigator() {
   return (
     <SettingsStack.Navigator screenOptions={headerOptions}>
-      <SettingsStack.Screen name="Settings" component={SettingsScreen} />
+      <SettingsStack.Screen name="SettingsHome" component={SettingsScreen} options={{ title: 'Settings' }} />
       <SettingsStack.Screen name="Availability" component={AvailabilityScreen} options={{ title: 'Availability' }} />
     </SettingsStack.Navigator>
   );
