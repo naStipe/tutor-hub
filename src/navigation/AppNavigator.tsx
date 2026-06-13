@@ -5,9 +5,18 @@ import { AuthNavigator } from './AuthNavigator';
 import { TabNavigator } from './TabNavigator';
 import { StudentTabNavigator } from './StudentTabNavigator';
 import { PendingApprovalScreen } from '../screens/auth/PendingApprovalScreen';
+import {useEffect} from "react";
+import * as SplashScreen from 'expo-splash-screen';
+
 
 export function AppNavigator() {
   const { user, profile, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading) {
+      SplashScreen.hideAsync();
+    }
+  }, [loading]);
 
   if (loading) {
     return (

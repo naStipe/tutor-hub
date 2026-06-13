@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { Calendar, DateData } from 'react-native-calendars';
+import { ExpandableCalendar, CalendarProvider } from 'react-native-calendars';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useLessons } from '../../hooks/useLessons';
 import { Lesson } from '../../types';
@@ -17,11 +17,20 @@ import { Button } from '../../components/ui/Button';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { colors } from '../../constants/colors';
-import { spacing, radius } from '../../constants/spacing';
+import { spacing } from '../../constants/spacing';
 import { typography } from '../../constants/typography';
 import dayjs from 'dayjs';
 
 type Props = NativeStackScreenProps<any, 'LessonList'>;
+
+const calendarTheme = {
+  selectedDayBackgroundColor: colors.primary,
+  todayTextColor: colors.primary,
+  arrowColor: colors.primary,
+  textMonthFontWeight: '700' as const,
+};
+
+const providerTheme = { todayButtonTextColor: colors.primary };
 
 function statusVariant(status: string): 'warning' | 'primary' | 'success' | 'danger' | 'neutral' {
   switch (status) {
@@ -49,25 +58,24 @@ export function LessonListScreen({ navigation }: Props) {
 
   const markedDates = useMemo(() => {
     const marks: Record<string, any> = {};
-    const dayDots: Record<string, { color: string }[]> = {};
-
     lessons.forEach((lesson) => {
       const dateKey = dayjs(lesson.date).format('YYYY-MM-DD');
-      if (!dayDots[dateKey]) dayDots[dateKey] = [];
-      dayDots[dateKey].push({ color: statusDotColor(lesson.status) });
+      if (!marks[dateKey]) marks[dateKey] = { dots: [] };
+      if (marks[dateKey].dots.length < 6) {
+        marks[dateKey].dots.push({ color: statusDotColor(lesson.status) });
+      }
     });
-
-    Object.entries(dayDots).forEach(([dateKey, dots]) => {
-      marks[dateKey] = { dots: dots.slice(0, 6) };
-    });
-
-    marks[selectedDate] = {
-      ...(marks[selectedDate] || {}),
-      selected: true,
-      selectedColor: colors.primary,
-    };
-
     return marks;
+  }, [lessons]);
+
+  const dayLessons = useMemo(() => {
+    return lessons
+      .filter((lesson) => dayjs(lesson.date).format('YYYY-MM-DD') === selectedDate)
+      .sort((a, b) => {
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (a.status !== 'pending' && b.status === 'pending') return 1;
+        return dayjs(a.date).valueOf() - dayjs(b.date).valueOf();
+      });
   }, [lessons, selectedDate]);
 
   const pendingCount = useMemo(
@@ -75,13 +83,16 @@ export function LessonListScreen({ navigation }: Props) {
     [lessons]
   );
 
-  const dayLessons = useMemo(() => {
-    return lessons
-      .filter((lesson) => dayjs(lesson.date).format('YYYY-MM-DD') === selectedDate)
-      .sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf());
-  }, [lessons, selectedDate]);
+  const handleDateChanged = useCallback((date: string) => {
+    setSelectedDate(date);
+  }, []);
 
-  function handleCancel(lesson: Lesson) {
+  const handlePendingBannerPress = useCallback(() => {
+    const firstPending = lessons.find((l) => l.status === 'pending');
+    if (firstPending) setSelectedDate(dayjs(firstPending.date).format('YYYY-MM-DD'));
+  }, [lessons]);
+
+  const handleCancel = useCallback((lesson: Lesson) => {
     const name = lesson.student?.full_name ?? lesson.student_profile?.full_name ?? 'this student';
     Alert.alert(
       'Cancel Lesson',
@@ -91,9 +102,9 @@ export function LessonListScreen({ navigation }: Props) {
         { text: 'Yes, cancel', style: 'destructive', onPress: () => cancelLesson(lesson.id) },
       ]
     );
-  }
+  }, [cancelLesson]);
 
-  function handleApprove(lesson: Lesson) {
+  const handleApprove = useCallback((lesson: Lesson) => {
     const name = lesson.student_profile?.full_name ?? lesson.student?.full_name ?? 'this student';
     Alert.alert(
       'Approve Lesson',
@@ -103,9 +114,9 @@ export function LessonListScreen({ navigation }: Props) {
         { text: 'Approve', onPress: () => approveLesson(lesson.id) },
       ]
     );
-  }
+  }, [approveLesson]);
 
-  function handleReject(lesson: Lesson) {
+  const handleReject = useCallback((lesson: Lesson) => {
     Alert.alert(
       'Reject Lesson',
       'Are you sure you want to reject this lesson request?',
@@ -114,40 +125,37 @@ export function LessonListScreen({ navigation }: Props) {
         { text: 'Reject', style: 'destructive', onPress: () => rejectLesson(lesson.id) },
       ]
     );
-  }
+  }, [rejectLesson]);
 
   if (isLoading) {
     return <LoadingSpinner message="Loading your lessons..." />;
   }
 
   return (
-    <View style={styles.container}>
+    <CalendarProvider
+      date={selectedDate}
+      onDateChanged={handleDateChanged}
+      showTodayButton
+      theme={providerTheme}
+    >
+      <ExpandableCalendar
+        firstDay={1}
+        markingType="multi-dot"
+        markedDates={markedDates}
+        theme={calendarTheme}
+        animateScroll={false}
+        pastScrollRange={2}
+        futureScrollRange={3}
+      />
+
       {pendingCount > 0 && (
-        <TouchableOpacity
-          style={styles.pendingBanner}
-          onPress={() => {
-            const firstPending = lessons.find((l) => l.status === 'pending');
-            if (firstPending) setSelectedDate(dayjs(firstPending.date).format('YYYY-MM-DD'));
-          }}
-        >
+        <TouchableOpacity style={styles.pendingBanner} onPress={handlePendingBannerPress}>
           <Badge label={`${pendingCount} pending`} variant="warning" />
           <Text style={styles.pendingBannerText}>
             {pendingCount === 1 ? 'lesson needs approval' : 'lessons need approval'}
           </Text>
         </TouchableOpacity>
       )}
-      <Calendar
-        markingType="multi-dot"
-        markedDates={markedDates}
-        onDayPress={(day: DateData) => setSelectedDate(day.dateString)}
-        theme={{
-          selectedDayBackgroundColor: colors.primary,
-          todayTextColor: colors.primary,
-          arrowColor: colors.primary,
-          textMonthFontWeight: '700',
-        }}
-        style={styles.calendar}
-      />
 
       <Text style={styles.sectionTitle}>
         {dayjs(selectedDate).format('dddd, MMM D')}
@@ -160,18 +168,20 @@ export function LessonListScreen({ navigation }: Props) {
         ListEmptyComponent={<EmptyState title="No lessons on this day" />}
         renderItem={({ item }) => {
           const studentName = item.student?.full_name ?? item.student_profile?.full_name ?? 'Unknown Student';
-
           return (
             <TouchableOpacity onPress={() => navigation.navigate('LessonDetail', { lessonId: item.id })}>
               <Card style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.studentName}>{studentName}</Text>
+                <View style={styles.cardTopRow}>
+                  <View style={styles.cardTopLeft}>
+                    <Text style={styles.time}>{dayjs(item.date).format('HH:mm')}</Text>
+                    <Text style={styles.studentName}>{studentName}</Text>
+                  </View>
                   <Badge label={item.status} variant={statusVariant(item.status)} />
                 </View>
-                <Text style={styles.time}>{dayjs(item.date).format('HH:mm')}</Text>
-                <Text style={styles.duration}>{item.duration_minutes} min</Text>
-                {item.subject && <Text style={styles.subject}>{item.subject}</Text>}
-
+                <View style={styles.cardMetaRow}>
+                  <Text style={styles.duration}>{item.duration_minutes} min</Text>
+                  {item.subject && <Text style={styles.subject}> · {item.subject}</Text>}
+                </View>
                 {item.status === 'pending' && (
                   <View style={styles.actions}>
                     <Button title="Approve" onPress={() => handleApprove(item)} variant="success" style={styles.actionButton} />
@@ -198,35 +208,11 @@ export function LessonListScreen({ navigation }: Props) {
       <View style={styles.fabContainer}>
         <Button title="+ Book Lesson" onPress={() => navigation.navigate('BookLesson', {})} />
       </View>
-    </View>
+    </CalendarProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  calendar: { borderBottomWidth: 1, borderBottomColor: colors.borderLight },
-  sectionTitle: {
-    ...typography.h3,
-    color: colors.text,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  listContent: { paddingBottom: spacing.md },
-  emptyContainer: { flexGrow: 1 },
-  card: { marginHorizontal: spacing.lg, marginBottom: spacing.md },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  studentName: { ...typography.bodyBold, color: colors.text },
-  time: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
-  duration: { ...typography.small, color: colors.textMuted },
-  subject: { ...typography.small, color: colors.textMuted, marginTop: spacing.xs },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  actionButton: { flex: 1, paddingVertical: spacing.sm },
-  fabContainer: { padding: spacing.lg, backgroundColor: colors.background },
   pendingBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -236,4 +222,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warningLight,
   },
   pendingBannerText: { ...typography.caption, color: colors.text },
+  sectionTitle: {
+    ...typography.h3,
+    color: colors.text,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  listContent: { paddingBottom: spacing.md },
+  emptyContainer: { flexGrow: 1 },
+  card: { marginHorizontal: spacing.lg, marginBottom: spacing.sm, padding: spacing.md },
+  cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardTopLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  time: { ...typography.bodyBold, color: colors.primary, minWidth: 50 },
+  studentName: { ...typography.bodyBold, color: colors.text },
+  cardMetaRow: { flexDirection: 'row', marginTop: spacing.xs / 2, marginLeft: 58 },
+  duration: { ...typography.small, color: colors.textMuted },
+  subject: { ...typography.small, color: colors.textMuted },
+  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  actionButton: { flex: 1, paddingVertical: spacing.xs + 2 },
+  fabContainer: { padding: spacing.lg, backgroundColor: colors.background },
 });
