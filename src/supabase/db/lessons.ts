@@ -66,9 +66,14 @@ export async function cancelLesson(lessonId: string): Promise<Lesson> {
 
 export async function rescheduleLesson(
   lessonId: string,
-  newDate: string
+  newDate: string,
+  duration?: number
 ): Promise<Lesson> {
-  return updateLesson(lessonId, { date: newDate, status: 'scheduled' });
+  return updateLesson(lessonId, {
+    date: newDate,
+    status: 'scheduled',
+    ...(duration && { duration_minutes: duration }),
+  });
 }
 
 export async function deleteLesson(lessonId: string): Promise<void> {

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import {View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform} from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { Picker } from '@react-native-picker/picker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -35,7 +35,7 @@ export function BookLessonScreen({ navigation }: Props) {
     ];
   }, [registeredStudents, students]);
 
-  const [selectedStudent, setSelectedStudent] = useState(allStudents[0]?.id ?? '');
+  const [selectedStudent, setSelectedStudent] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [duration, setDuration] = useState(60);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -152,12 +152,42 @@ export function BookLessonScreen({ navigation }: Props) {
     <ScrollView style={styles.container}>
       <View style={styles.section}>
         <Text style={styles.label}>Student *</Text>
-        <View style={styles.pickerWrapper}>
-          <Picker selectedValue={selectedStudent} onValueChange={setSelectedStudent}>
-            {allStudents.map((s) => (
-              <Picker.Item key={s.id} label={s.full_name} value={s.id} />
-            ))}
-          </Picker>
+        <View style={styles.section}>
+          <Text style={styles.label}>Student *</Text>
+          {Platform.OS === 'web' ? (
+            <select
+              value={selectedStudent}
+              onChange={(e) => setSelectedStudent(e.target.value)}
+              style={{
+                width: '100%',
+                padding: 12,
+                borderRadius: 8,
+                borderColor: colors.border,
+                borderWidth: 1,
+                fontSize: 16,
+                backgroundColor: colors.background,
+                color: selectedStudent ? colors.text : colors.textMuted,
+                marginBottom: spacing.sm,
+              }}
+            >
+              <option value="" disabled>Select a student...</option>
+              {allStudents.map((s) => (
+                <option key={s.id} value={s.id}>{s.full_name}</option>
+              ))}
+            </select>
+          ) : (
+            <View style={styles.pickerWrapper}>
+              <Picker
+                selectedValue={selectedStudent}
+                onValueChange={(val) => setSelectedStudent(val)}
+              >
+                <Picker.Item label="Select a student..." value="" color={colors.textMuted} />
+                {allStudents.map((s) => (
+                  <Picker.Item key={s.id} label={s.full_name} value={s.id} />
+                ))}
+              </Picker>
+            </View>
+          )}
         </View>
       </View>
 

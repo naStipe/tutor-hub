@@ -35,19 +35,17 @@ export function RescheduleLessonScreen({ route, navigation }: Props) {
 
   const originalDate = lesson ? dayjs(lesson.date).format('YYYY-MM-DD') : null;
   const originalTime = lesson ? dayjs(lesson.date).format('HH:mm') : null;
-  const duration = lesson?.duration_minutes ?? 60;
 
+  const [duration, setDuration] = useState(lesson?.duration_minutes ?? 60);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Generate time slots for selected date
   const timeSlots = useMemo(() => {
     if (!selectedDate) return [];
 
     const slots: { time: string; available: boolean; isOriginal: boolean }[] = [];
 
-    // Get booked lessons on this day (excluding current lesson)
     const dayBooked = lessons
       .filter((l) => l.id !== lessonId && (l.status === 'pending' || l.status === 'scheduled'))
       .map((l) => ({ start: dayjs(l.date), end: dayjs(l.date).add(l.duration_minutes, 'minute') }))
@@ -61,11 +59,10 @@ export function RescheduleLessonScreen({ route, navigation }: Props) {
       const conflicts = dayBooked.some((b) => current.isBefore(b.end) && slotEnd.isAfter(b.start));
       const isPast = current.isBefore(dayjs());
 
-      // Check if this slot is part of the original lesson time
       const isOriginal = selectedDate === originalDate && (() => {
         const slotStart = current;
         const origStart = dayjs(`${originalDate} ${originalTime}`);
-        const origEnd = origStart.add(duration, 'minute');
+        const origEnd = origStart.add(lesson?.duration_minutes ?? 60, 'minute');
         return slotStart.isSameOrAfter(origStart) && slotStart.isBefore(origEnd);
       })();
 
@@ -79,9 +76,8 @@ export function RescheduleLessonScreen({ route, navigation }: Props) {
     }
 
     return slots;
-  }, [selectedDate, lessons, lessonId, duration, originalDate, originalTime]);
+  }, [selectedDate, lessons, lessonId, duration, originalDate, originalTime, lesson]);
 
-  // Mark calendar — highlight original date
   const markedDates = useMemo(() => {
     const marks: Record<string, any> = {};
     if (originalDate) {
@@ -92,15 +88,7 @@ export function RescheduleLessonScreen({ route, navigation }: Props) {
         },
       };
     }
-    if (selectedDate && selectedDate !== originalDate) {
-      marks[selectedDate] = {
-        customStyles: {
-          container: { backgroundColor: colors.primary, borderRadius: radius.md },
-          text: { color: colors.textInverse, fontWeight: 'bold' },
-        },
-      };
-    }
-    if (selectedDate && selectedDate === originalDate) {
+    if (selectedDate) {
       marks[selectedDate] = {
         customStyles: {
           container: { backgroundColor: colors.primary, borderRadius: radius.md },
@@ -119,7 +107,7 @@ export function RescheduleLessonScreen({ route, navigation }: Props) {
     setSaving(true);
     try {
       const newDateTime = dayjs(`${selectedDate} ${selectedTime}`).toISOString();
-      rescheduleLesson({ lessonId, newDate: newDateTime });
+      rescheduleLesson({ lessonId, newDate: newDateTime, duration });
       navigation.goBack();
     } catch (error: any) {
       Alert.alert('Error', error.message);
@@ -146,7 +134,7 @@ export function RescheduleLessonScreen({ route, navigation }: Props) {
         )}
         <Text style={styles.infoLabel}>Current date & time</Text>
         <Text style={styles.infoValue}>
-          {dayjs(lesson.date).format('MMM D, YYYY · HH:mm')} ({duration} min)
+          {dayjs(lesson.date).format('MMM D, YYYY · HH:mm')} ({lesson.duration_minutes} min)
         </Text>
       </Card>
 
@@ -177,6 +165,21 @@ export function RescheduleLessonScreen({ route, navigation }: Props) {
           <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
           <Text style={styles.legendText}>Selected date</Text>
         </View>
+      </View>
+
+      <Text style={styles.sectionTitle}>Lesson Duration</Text>
+      <View style={styles.durationRow}>
+        {DURATIONS.map((d) => (
+          <TouchableOpacity
+            key={d}
+            style={[styles.durationChip, duration === d && styles.durationChipActive]}
+            onPress={() => { setDuration(d); setSelectedTime(null); }}
+          >
+            <Text style={[styles.durationChipText, duration === d && styles.durationChipTextActive]}>
+              {`${d} min`}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {selectedDate && (
@@ -288,6 +291,21 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   legendDot: { width: 12, height: 12, borderRadius: 3 },
   legendText: { ...typography.small, color: colors.textSecondary },
+  durationRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  durationChip: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md + 2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  durationChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  durationChipText: { ...typography.captionBold, color: colors.textSecondary },
+  durationChipTextActive: { color: colors.textInverse },
   timeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

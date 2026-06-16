@@ -42,8 +42,11 @@ export function useLessons() {
   });
 
   const rescheduleMutation = useMutation({
-    mutationFn: ({ lessonId, newDate }: { lessonId: string; newDate: string }) =>
-      rescheduleLesson(lessonId, newDate),
+    mutationFn: ({ lessonId, newDate, duration }: {
+      lessonId: string;
+      newDate: string;
+      duration?: number;
+    }) => rescheduleLesson(lessonId, newDate, duration),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lessons'] }),
   });
 
