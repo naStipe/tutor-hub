@@ -31,14 +31,18 @@ export function NoTutorScreen() {
         .eq('role', 'tutor')
         .single();
 
+      console.log('Tutor lookup:', tutor, error);
+
       if (error || !tutor) {
         Alert.alert('Error', 'Invalid invite code');
         return;
       }
 
       await connectToTutor(tutor.id, profile!.id);
+      console.log('Connected successfully');
       queryClient.invalidateQueries({ queryKey: ['student-connections'] });
     } catch (error: any) {
+      console.error('Connect error:', error);
       Alert.alert('Error', error.message);
     } finally {
       setConnecting(false);
