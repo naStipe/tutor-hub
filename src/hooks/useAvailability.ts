@@ -14,8 +14,11 @@ export function useAvailability(tutorId?: string) {
   });
 
   const addMutation = useMutation({
-    mutationFn: ({ dayOfWeek, startTime, endTime }: { dayOfWeek: number; startTime: string; endTime: string }) =>
-      addAvailability(user!.id, dayOfWeek, startTime, endTime),
+    mutationFn: ({ dayOfWeek, startTime, endTime }: {
+      dayOfWeek: number;
+      startTime: string;
+      endTime: string;
+    }) => addAvailability(user!.id, dayOfWeek, startTime, endTime),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['availability'] }),
   });
 

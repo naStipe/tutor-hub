@@ -1,16 +1,19 @@
 import { NavigationContainer } from '@react-navigation/native';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
 import { useAuth } from '../hooks/useAuth';
+import { useStudentConnections } from '../hooks/useStudentConnections';
 import { AuthNavigator } from './AuthNavigator';
 import { TabNavigator } from './TabNavigator';
 import { StudentTabNavigator } from './StudentTabNavigator';
 import { PendingApprovalScreen } from '../screens/auth/PendingApprovalScreen';
-import {useEffect} from "react";
-import * as SplashScreen from 'expo-splash-screen';
-
+import { NoTutorScreen } from '../screens/auth/NoTutorScreen';
+import { colors } from '../constants/colors';
 
 export function AppNavigator() {
   const { user, profile, loading } = useAuth();
+  const { hasConnections, isLoading: loadingConnections } = useStudentConnections();
 
   useEffect(() => {
     if (!loading) {
@@ -21,7 +24,7 @@ export function AppNavigator() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -37,20 +40,46 @@ export function AppNavigator() {
   if (!profile) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
+    );
+  }
+
+  if (profile.role === 'pending_tutor') {
+    return (
+      <NavigationContainer>
+        <PendingApprovalScreen />
+      </NavigationContainer>
+    );
+  }
+
+  if (profile.role === 'student') {
+    if (loadingConnections) {
+      return (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      );
+    }
+
+    if (!hasConnections) {
+      return (
+        <NavigationContainer>
+          <NoTutorScreen />
+        </NavigationContainer>
+      );
+    }
+
+    return (
+      <NavigationContainer>
+        <StudentTabNavigator />
+      </NavigationContainer>
     );
   }
 
   return (
     <NavigationContainer>
-      {profile.role === 'pending_tutor' ? (
-        <PendingApprovalScreen />
-      ) : profile.role === 'student' ? (
-        <StudentTabNavigator />
-      ) : (
-        <TabNavigator />
-      )}
+      <TabNavigator />
     </NavigationContainer>
   );
 }

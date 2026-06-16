@@ -3,10 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'rea
 import { Calendar, DateData } from 'react-native-calendars';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useStudentLessons } from '../../hooks/useStudentLessons';
-import { useAuth } from '../../hooks/useAuth';
 import { useAvailability } from '../../hooks/useAvailability';
 import { useTutorBookedSlots } from '../../hooks/useTutorBookedSlots';
-import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
@@ -24,9 +22,9 @@ const DURATIONS = [30, 45, 60, 90];
 
 export function BookLessonScreen({ navigation }: Props) {
   const { bookLesson } = useStudentLessons();
-  const { profile } = useAuth();
-  const { availability, isLoading: loadingAvailability } = useAvailability(profile?.tutor_id ?? undefined);
-  const { bookedSlots, isLoading: loadingBooked } = useTutorBookedSlots(profile?.tutor_id ?? undefined);
+  const { tutorId } = useStudentLessons();
+  const { availability, isLoading: loadingAvailability } = useAvailability(tutorId ?? undefined);
+  const { bookedSlots, isLoading: loadingBooked } = useTutorBookedSlots(tutorId ?? undefined);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [duration, setDuration] = useState(60);
