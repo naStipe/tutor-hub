@@ -5,9 +5,9 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Alert,
+  Alert, Platform,
 } from 'react-native';
-import { ExpandableCalendar, CalendarProvider } from 'react-native-calendars';
+import {ExpandableCalendar, CalendarProvider, Calendar} from 'react-native-calendars';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useLessons } from '../../hooks/useLessons';
 import { Lesson } from '../../types';
@@ -138,15 +138,32 @@ export function LessonListScreen({ navigation }: Props) {
       showTodayButton
       theme={providerTheme}
     >
-      <ExpandableCalendar
-        firstDay={1}
-        markingType="multi-dot"
-        markedDates={markedDates}
-        theme={calendarTheme}
-        animateScroll={false}
-        pastScrollRange={2}
-        futureScrollRange={3}
-      />
+      {Platform.OS === 'web' ? (
+        <Calendar
+          firstDay={1}
+          markingType="multi-dot"
+          markedDates={{
+            ...markedDates,
+            [selectedDate]: {
+              ...(markedDates[selectedDate] || {}),
+              selected: true,
+              selectedColor: colors.primary,
+            },
+          }}
+          theme={calendarTheme}
+          onDayPress={(day) => setSelectedDate(day.dateString)}
+        />
+      ) : (
+        <ExpandableCalendar
+          firstDay={1}
+          markingType="multi-dot"
+          markedDates={markedDates}
+          theme={calendarTheme}
+          animateScroll={false}
+          pastScrollRange={2}
+          futureScrollRange={3}
+        />
+      )}
 
       {pendingCount > 0 && (
         <TouchableOpacity style={styles.pendingBanner} onPress={handlePendingBannerPress}>

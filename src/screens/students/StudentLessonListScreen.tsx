@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import { View, Text, FlatList, Alert, StyleSheet } from 'react-native';
-import { ExpandableCalendar, CalendarProvider } from 'react-native-calendars';
+import {View, Text, FlatList, Alert, StyleSheet, Platform} from 'react-native';
+import {ExpandableCalendar, CalendarProvider, Calendar} from 'react-native-calendars';
 import { useStudentLessons } from '../../hooks/useStudentLessons';
 import { Lesson } from '../../types';
 import { Card } from '../../components/ui/Card';
@@ -94,15 +94,32 @@ export function StudentLessonListScreen() {
       showTodayButton
       theme={providerTheme}
     >
-      <ExpandableCalendar
-        firstDay={1}
-        markingType="multi-dot"
-        markedDates={markedDates}
-        theme={calendarTheme}
-        animateScroll={false}
-        pastScrollRange={2}
-        futureScrollRange={3}
-      />
+      {Platform.OS === 'web' ? (
+        <Calendar
+          firstDay={1}
+          markingType="multi-dot"
+          markedDates={{
+            ...markedDates,
+            [selectedDate]: {
+              ...(markedDates[selectedDate] || {}),
+              selected: true,
+              selectedColor: colors.primary,
+            },
+          }}
+          theme={calendarTheme}
+          onDayPress={(day) => setSelectedDate(day.dateString)}
+        />
+      ) : (
+        <ExpandableCalendar
+          firstDay={1}
+          markingType="multi-dot"
+          markedDates={markedDates}
+          theme={calendarTheme}
+          animateScroll={false}
+          pastScrollRange={2}
+          futureScrollRange={3}
+        />
+      )}
 
       <Text style={styles.sectionTitle}>
         {dayjs(selectedDate).format('dddd, MMM D')}

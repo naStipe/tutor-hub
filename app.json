@@ -1,6 +1,6 @@
 {
   "expo": {
-
+    "platforms": ["ios", "android", "web"],
     "name": "tutor-hub",
     "slug": "tutor-hub",
     "scheme": "tutorhub",
