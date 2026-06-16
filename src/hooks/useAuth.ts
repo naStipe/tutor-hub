@@ -27,14 +27,39 @@ export function useAuth(): AuthState {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+    // Handle OAuth callback on web
+    if (typeof window !== 'undefined') {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+
+      if (accessToken) {
+        supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken ?? '',
+        }).then(async ({ data, error }) => {
+          if (data.session) {
+            setSession(data.session);
+            setUser(data.session.user);
+            try {
+              await fetchProfile(data.session.user.id);
+            } catch (e) {}
+            setLoading(false);
+            // Clean up the URL hash
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        });
+        return;
+      }
+    }
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         try {
           await fetchProfile(session.user.id);
-        } catch (e) {
-        }
+        } catch (e) {}
       }
       setLoading(false);
     });
@@ -46,8 +71,7 @@ export function useAuth(): AuthState {
         if (session?.user) {
           try {
             await fetchProfile(session.user.id);
-          } catch (e) {
-          }
+          } catch (e) {}
         } else {
           setProfile(null);
         }
