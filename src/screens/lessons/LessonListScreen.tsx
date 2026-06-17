@@ -193,7 +193,13 @@ export function LessonListScreen({ navigation }: Props) {
                     <Text style={styles.time}>{dayjs(item.date).format('HH:mm')}</Text>
                     <Text style={styles.studentName}>{studentName}</Text>
                   </View>
-                  <Badge label={item.status} variant={statusVariant(item.status)} />
+                  <View style={styles.badges}>
+                    <Badge label={item.status} variant={statusVariant(item.status)} />
+                    <Badge
+                      label={item.payment_status}
+                      variant={item.payment_status === 'paid' ? 'success' : 'neutral'}
+                    />
+                  </View>
                 </View>
                 <View style={styles.cardMetaRow}>
                   <Text style={styles.duration}>{item.duration_minutes} min</Text>
@@ -258,4 +264,5 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   actionButton: { flex: 1, paddingVertical: spacing.xs + 2 },
   fabContainer: { padding: spacing.lg, backgroundColor: colors.background },
+  badges: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center' },
 });

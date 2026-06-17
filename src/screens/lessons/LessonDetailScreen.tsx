@@ -1,6 +1,9 @@
-import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLessons } from '../../hooks/useLessons';
+import { useLessonPacks } from '../../hooks/useLessonPacks';
+import { supabase } from '../../supabase/config';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -26,8 +29,11 @@ function statusVariant(status: string): 'warning' | 'primary' | 'success' | 'dan
 export function LessonDetailScreen({ route, navigation }: Props) {
   const lessonId = route.params?.lessonId;
   const { lessons, cancelLesson, deleteLesson, approveLesson, rejectLesson, isLoading } = useLessons();
+  const { packs } = useLessonPacks();
+  const queryClient = useQueryClient();
 
   const lesson = lessons.find((l) => l.id === lessonId);
+  const pack = lesson?.pack_id ? packs.find((p) => p.id === lesson.pack_id) : null;
 
   function handleApprove() {
     Alert.alert('Approve Lesson', 'Approve this lesson request?', [
@@ -39,7 +45,11 @@ export function LessonDetailScreen({ route, navigation }: Props) {
   function handleReject() {
     Alert.alert('Reject Lesson', 'Reject this lesson request?', [
       { text: 'No', style: 'cancel' },
-      { text: 'Reject', style: 'destructive', onPress: () => { rejectLesson(lessonId); navigation.goBack(); } },
+      {
+        text: 'Reject',
+        style: 'destructive',
+        onPress: () => { rejectLesson(lessonId); navigation.goBack(); },
+      },
     ]);
   }
 
@@ -65,6 +75,29 @@ export function LessonDetailScreen({ route, navigation }: Props) {
     ]);
   }
 
+  async function handleTogglePayment() {
+    if (!lesson) return;
+    const newStatus = lesson.payment_status === 'paid' ? 'unpaid' : 'paid';
+    Alert.alert(
+      'Change Payment Status',
+      `Mark this lesson as ${newStatus}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            const { error } = await supabase
+              .from('lessons')
+              .update({ payment_status: newStatus })
+              .eq('id', lesson.id);
+            if (error) Alert.alert('Error', error.message);
+            else queryClient.invalidateQueries({ queryKey: ['lessons'] });
+          },
+        },
+      ]
+    );
+  }
+
   if (isLoading) {
     return <LoadingSpinner message="Loading lesson..." />;
   }
@@ -88,6 +121,31 @@ export function LessonDetailScreen({ route, navigation }: Props) {
         <Row label="Duration" value={`${lesson.duration_minutes} minutes`} />
         {lesson.subject && <Row label="Subject" value={lesson.subject} />}
         {lesson.notes && <Row label="Notes" value={lesson.notes} last />}
+      </Card>
+
+      <Card style={styles.card}>
+        <View style={styles.paymentRow}>
+          <Text style={styles.rowLabel}>Payment</Text>
+          <View style={styles.paymentRight}>
+            <Badge
+              label={lesson.payment_status}
+              variant={lesson.payment_status === 'paid' ? 'success' : 'neutral'}
+            />
+            <TouchableOpacity onPress={handleTogglePayment} style={styles.toggleButton}>
+              <Text style={styles.toggleText}>
+                {lesson.payment_status === 'paid' ? 'Mark Unpaid' : 'Mark Paid'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        {pack && (
+          <View style={styles.packRow}>
+            <Text style={styles.rowLabel}>Pack</Text>
+            <Text style={styles.rowValue}>
+              {`${pack.lessons_remaining}/${pack.total_lessons} remaining`}
+            </Text>
+          </View>
+        )}
       </Card>
 
       {lesson.status === 'pending' && (
@@ -143,6 +201,22 @@ const styles = StyleSheet.create({
   rowLast: { borderBottomWidth: 0 },
   rowLabel: { ...typography.caption, color: colors.textMuted },
   rowValue: { ...typography.captionBold, color: colors.text, maxWidth: '60%', textAlign: 'right' },
+  paymentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm + 2,
+  },
+  paymentRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  toggleButton: { paddingHorizontal: spacing.xs },
+  toggleText: { ...typography.captionBold, color: colors.primary },
+  packRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm + 2,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
   actions: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   actionButton: { flex: 1 },
   deleteButton: { borderColor: colors.danger, marginTop: spacing.sm },

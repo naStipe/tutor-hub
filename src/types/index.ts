@@ -37,13 +37,27 @@ export interface Lesson {
   tutor_id: string;
   student_id?: string;
   student_profile_id?: string;
-  student?: { id: string; full_name: string; email?: string; phone?: string };
+  student?: Student;
   student_profile?: Profile;
   subject?: string;
   date: string;
   duration_minutes: number;
   status: LessonStatus;
+  payment_status: PaymentStatus;
+  pack_id?: string;
   notes?: string;
   created_at: string;
   updated_at: string;
+}
+
+export type PaymentStatus = 'unpaid' | 'paid';
+
+export interface LessonPack {
+  id: string;
+  tutor_id: string;
+  student_profile_id?: string;
+  student_id?: string;
+  total_lessons: number;
+  lessons_remaining: number;
+  created_at: string;
 }
