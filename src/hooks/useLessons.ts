@@ -19,7 +19,9 @@ export function useLessons() {
 
   useEffect(() => {
     if (user) {
-      autoCompletePastLessons(user.id);
+      autoCompletePastLessons(user.id).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['lessons', user.id] });
+      });
     }
   }, [user]);
 
