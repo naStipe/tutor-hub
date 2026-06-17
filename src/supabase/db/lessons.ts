@@ -1,6 +1,29 @@
 import { supabase } from '../config';
 import { Lesson, LessonStatus } from '../../types';
 
+export async function autoCompletePastLessons(tutorId: string): Promise<void> {
+  const now = new Date().toISOString();
+
+  const { data: lessons } = await supabase
+    .from('lessons')
+    .select('id, date, duration_minutes')
+    .eq('tutor_id', tutorId)
+    .eq('status', 'scheduled');
+
+  const toComplete = lessons?.filter((l) => {
+    const endTime = new Date(l.date);
+    endTime.setMinutes(endTime.getMinutes() + l.duration_minutes);
+    return endTime < new Date(now);
+  }) ?? [];
+
+  if (toComplete.length > 0) {
+    await supabase
+      .from('lessons')
+      .update({ status: 'completed', updated_at: now })
+      .in('id', toComplete.map((l) => l.id));
+  }
+}
+
 export async function getLessons(tutorId: string): Promise<Lesson[]> {
   const { data, error } = await supabase
     .from('lessons')

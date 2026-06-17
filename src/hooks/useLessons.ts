@@ -8,13 +8,20 @@ import {
   rescheduleLesson,
   deleteLesson,
   approveLesson,
-  rejectLesson,
+  rejectLesson, autoCompletePastLessons,
 } from '../supabase/db/lessons';
 import { Lesson } from '../types';
+import {useEffect} from "react";
 
 export function useLessons() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (user) {
+      autoCompletePastLessons(user.id);
+    }
+  }, [user]);
 
   const lessonsQuery = useQuery({
     queryKey: ['lessons', user?.id],
